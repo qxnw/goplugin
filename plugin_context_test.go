@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	_ "github.com/mattn/go-oci8"
+	//_ "github.com/mattn/go-oci8"
 	"github.com/qxnw/lib4go/transform"
 	"github.com/qxnw/lib4go/ut"
 	"github.com/qxnw/lib4go/utility"
