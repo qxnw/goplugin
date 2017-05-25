@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -105,17 +106,21 @@ func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
 
 }
 
-func (w *PluginContext) GetJsonFromCache(sql string, input map[string]interface{}) (cvalue string, err error) {
+func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interface{}) (cvalue string, err error) {
 	db, err := w.GetDB()
 	if err != nil {
 		return
 	}
-	query, params := db.GetTPL().GetSQLContext(sql, input)
-	key := fmt.Sprintf("%s:%+v", query, params)
+	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
+	if err != nil {
+		return
+	}
 	client, err := w.GetCache()
 	if err != nil {
 		return
 	}
+	tf := transform.NewMaps(input)
+	key = tf.Translate(key)
 	cvalue, err = client.Get(key)
 	if err != nil {
 		return
@@ -131,31 +136,60 @@ func (w *PluginContext) GetJsonFromCache(sql string, input map[string]interface{
 	if err != nil {
 		return
 	}
-	client.Set(key, string(buffer), 0)
+	client.Set(key, string(buffer), expireAt)
 	return
 }
-func (w *PluginContext) GetFirstMapFromCache(sql string, input map[string]interface{}) (data map[string]interface{}, err error) {
-	result, err := w.GetMapFromCache(sql, input)
+
+func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]interface{}) (data map[string]interface{}, err error) {
+	result, err := w.GetMapFromCache(tpl, input)
 	if err != nil {
 		return
 	}
 	if len(result) > 0 {
 		return result[0], nil
 	}
-	return nil, fmt.Errorf("返回的数据条数为0:(%s)", sql)
-
+	return nil, fmt.Errorf("返回的数据条数为0:(%s)", tpl)
 }
-func (w *PluginContext) GetMapFromCache(sql string, input map[string]interface{}) (data []map[string]interface{}, err error) {
+
+func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, expireAt int, err error) {
+	if len(tpl) != 3 {
+		err = fmt.Errorf("输入的SQL模板错误，必须包含3个元素，SQL语句/缓存KEY/过期时间:%v", tpl)
+		return
+	}
+	sql = tpl[0]
+	key = tpl[1]
+	expireAt, err = strconv.Atoi(tpl[2])
+	if err != nil {
+		err = fmt.Errorf("输入的SQL模板错误，过期时间必须为数字:%v", tpl)
+		return
+	}
+	return
+}
+
+func (w *PluginContext) getSql(tpl []string) (sql string, err error) {
+	if len(tpl) >= 1 {
+		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素，SQL语句:%v", tpl)
+		return
+	}
+	sql = tpl[0]
+	return
+}
+func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []map[string]interface{}, err error) {
 	db, err := w.GetDB()
 	if err != nil {
 		return
 	}
-	query, params := db.GetTPL().GetSQLContext(sql, input)
-	key := fmt.Sprintf("%s:%+v", query, params)
+	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
+	if err != nil {
+		return
+	}
+
 	client, err := w.GetCache()
 	if err != nil {
 		return
 	}
+	tf := transform.NewMaps(input)
+	key = tf.Translate(key)
 	dstr, err := client.Get(key)
 	if err != nil {
 		return
@@ -172,27 +206,39 @@ func (w *PluginContext) GetMapFromCache(sql string, input map[string]interface{}
 	if err != nil {
 		return
 	}
-	client.Set(key, string(cvalue), 0)
+	client.Set(key, string(cvalue), expireAt)
 	return
 }
-func (w *PluginContext) ScalarFromDb(sql string, input map[string]interface{}) (data interface{}, err error) {
+func (w *PluginContext) ScalarFromDb(tpl []string, input map[string]interface{}) (data interface{}, err error) {
 	db, err := w.GetDB()
+	if err != nil {
+		return
+	}
+	sql, err := w.getSql(tpl)
 	if err != nil {
 		return
 	}
 	data, _, _, err = db.Scalar(sql, input)
 	return
 }
-func (w *PluginContext) ExecuteToDb(sql string, input map[string]interface{}) (row int64, err error) {
+func (w *PluginContext) ExecuteToDb(tpl []string, input map[string]interface{}) (row int64, err error) {
 	db, err := w.GetDB()
+	if err != nil {
+		return
+	}
+	sql, err := w.getSql(tpl)
 	if err != nil {
 		return
 	}
 	row, _, _, err = db.Execute(sql, input)
 	return
 }
-func (w *PluginContext) GetDataFromDb(sql string, input map[string]interface{}) (data []map[string]interface{}, err error) {
+func (w *PluginContext) GetDataFromDb(tpl []string, input map[string]interface{}) (data []map[string]interface{}, err error) {
 	db, err := w.GetDB()
+	if err != nil {
+		return
+	}
+	sql, err := w.getSql(tpl)
 	if err != nil {
 		return
 	}
