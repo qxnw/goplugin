@@ -31,23 +31,24 @@ type Handler interface {
 	Handle(service string, c Context, invoker RPCInvoker) (status int, result string, err error)
 }
 
-//ServiceHandlers 服务处理程序列表
-var ServiceHandlers map[string]Handler
+type Registry struct {
+	ServiceHandlers map[string]Handler
+	Services        []string
+}
 
-//Services 当前提供的服务列表
-var Services []string
-
-func init() {
-	ServiceHandlers = make(map[string]Handler)
-	Services = make([]string, 0, 16)
-
+//NewRegistry 构建插件的注册中心
+func NewRegistry() *Registry {
+	r := &Registry{}
+	r.ServiceHandlers = make(map[string]Handler)
+	r.Services = make([]string, 0, 16)
+	return r
 }
 
 //Register 注册处理程序
-func Register(name string, handler Handler) {
-	if _, ok := ServiceHandlers[name]; ok {
+func (r *Registry) Register(name string, handler Handler) {
+	if _, ok := r.ServiceHandlers[name]; ok {
 		panic("Register called twice for adapter " + name)
 	}
-	ServiceHandlers[name] = handler
-	Services = append(Services, name)
+	r.ServiceHandlers[name] = handler
+	r.Services = append(r.Services, name)
 }
