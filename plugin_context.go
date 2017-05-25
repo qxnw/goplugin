@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/qxnw/hydra_plugin/plugins"
 	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/logger"
@@ -27,14 +26,14 @@ func init() {
 
 type PluginContext struct {
 	service      string
-	ctx          plugins.Context
+	ctx          Context
 	Input        transform.ITransformGetter
 	Params       transform.ITransformGetter
 	Body         string
 	db           *db.DB
 	Args         map[string]string
 	func_var_get func(c string, n string) (string, error)
-	RPC          plugins.RPCInvoker
+	RPC          RPCInvoker
 	*logger.Logger
 }
 
@@ -48,7 +47,7 @@ func (w *PluginContext) CheckMustFields(names ...string) error {
 	return nil
 }
 
-func GetContext(ctx plugins.Context, invoker plugins.RPCInvoker) (wx *PluginContext, err error) {
+func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
 	defer func() {
