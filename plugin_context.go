@@ -152,7 +152,7 @@ func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]inte
 }
 
 func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, expireAt int, err error) {
-	if len(tpl) != 3 {
+	if len(tpl) < 3 {
 		err = fmt.Errorf("输入的SQL模板错误，必须包含3个元素，SQL语句/缓存KEY/过期时间:%v", tpl)
 		return
 	}
