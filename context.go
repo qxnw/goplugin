@@ -47,6 +47,17 @@ func (w *PluginContext) CheckMustFields(names ...string) error {
 	return nil
 }
 
+//CheckMapMustFields 检查map中的参数是否为空
+func (w *PluginContext) CheckMapMustFields(input map[string]interface{}, names ...string) error {
+	for _, v := range names {
+		if input[v] == nil {
+			err := fmt.Errorf("输入参数:%s不能为空", v)
+			return err
+		}
+	}
+	return nil
+}
+
 func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
