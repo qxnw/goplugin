@@ -28,7 +28,7 @@ type PluginWorker interface {
 
 //Handler 处理程序接口
 type Handler interface {
-	Handle(service string, c Context, invoker RPCInvoker) (status int, result string, err error)
+	Handle(service string, c Context, invoker RPCInvoker) (status int, result interface{}, err error)
 }
 
 type Registry struct {
