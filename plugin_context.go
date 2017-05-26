@@ -12,6 +12,7 @@ import (
 	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/logger"
 	"github.com/qxnw/lib4go/memcache"
+	"github.com/qxnw/lib4go/mq"
 	"github.com/qxnw/lib4go/transform"
 )
 
@@ -32,9 +33,11 @@ type PluginContext struct {
 	Params       transform.ITransformGetter
 	Body         string
 	db           *db.DB
+	cache        *memcache.MemcacheClient
 	Args         map[string]string
 	func_var_get func(c string, n string) (string, error)
 	RPC          RPCInvoker
+	producer     mq.MQProducer
 	*logger.Logger
 }
 
@@ -51,6 +54,9 @@ func (w *PluginContext) CheckMustFields(names ...string) error {
 func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
+	wx.db = nil
+	wx.producer = nil
+
 	defer func() {
 		if err != nil {
 			wx.Close()
@@ -85,6 +91,10 @@ func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) 
 }
 
 func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
+	if w.cache != nil {
+		return w.cache, nil
+	}
+
 	name, ok := w.Args["cache"]
 	if !ok {
 		return nil, fmt.Errorf("服务%s未配置cache参数(%v)", w.service, w.Args)
@@ -102,8 +112,12 @@ func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
 		err = fmt.Errorf("cache[%s]配置文件错误，未包含server节点:%s", name, conf)
 		return nil, err
 	}
-	return memcache.New(strings.Split(server.(string), ";"))
-
+	c, err = memcache.New(strings.Split(server.(string), ";"))
+	if err != nil {
+		return nil, err
+	}
+	w.cache = c
+	return
 }
 
 func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interface{}) (cvalue string, err error) {
@@ -175,10 +189,6 @@ func (w *PluginContext) getSql(tpl []string) (sql string, err error) {
 	return
 }
 func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []map[string]interface{}, err error) {
-	db, err := w.GetDB()
-	if err != nil {
-		return
-	}
 	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
 	if err != nil {
 		return
@@ -196,6 +206,10 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	}
 	if dstr != "" {
 		err = json.Unmarshal([]byte(dstr), &data)
+		return
+	}
+	db, err := w.GetDB()
+	if err != nil {
 		return
 	}
 	data, _, _, err = db.Query(sql, input)
@@ -324,6 +338,46 @@ func (w *PluginContext) getGetParams(input interface{}) (t transform.ITransformG
 	}
 	return t, nil
 }
+
+//GetMQProducer 获取GetMQProducer
+func (w *PluginContext) GetMQProducer() (p mq.MQProducer, err error) {
+	if w.producer != nil {
+		return w.producer, nil
+	}
+	name, ok := w.Args["mq"]
+	if !ok {
+		return nil, fmt.Errorf("服务%s未配置mq参数(%v)", w.service, w.Args)
+	}
+	conf, err := w.func_var_get("mq", name)
+	if err != nil {
+		return nil, err
+	}
+	configMap, err := jsons.Unmarshal([]byte(conf))
+	if err != nil {
+		return nil, err
+	}
+	address, ok := configMap["address"]
+	if !ok {
+		return nil, fmt.Errorf("mq配置文件错误，未包含provider节点:var/mq/%s", name)
+	}
+	p, err = mq.NewMQProducer(address.(string), mq.WithLogger(w.Logger))
+	if err != nil {
+		err = fmt.Errorf("创建mq失败:err:%v", err)
+		return
+	}
+	err = p.Connect()
+	if err != nil {
+		err = fmt.Errorf("无法连接到MQ服务器:err:%v", err)
+		return
+	}
+	w.producer = p
+
+	return
+}
+
 func (w *PluginContext) Close() {
+	if w.producer != nil {
+		w.producer.Close()
+	}
 	contextPool.Put(w)
 }
