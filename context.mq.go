@@ -16,7 +16,7 @@ func (w *PluginContext) SendMQMessage(queueName string, msg string, timeoutName 
 	}
 	timeout, err := strconv.Atoi(w.Args[timeoutName])
 	if err != nil {
-		return fmt.Errorf("MQ_TIMEOUT转换为数字失败.mq_timeout:%s", w.Args[timeoutName])
+		return fmt.Errorf("转换为数字失败.%s:%s", timeoutName, w.Args[timeoutName])
 	}
 	mqProducer, err := w.GetMQProducer()
 	if err != nil {
