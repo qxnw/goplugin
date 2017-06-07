@@ -31,7 +31,7 @@ func (w *PluginContext) ExecuteToDb(tpl []string, input map[string]interface{}) 
 	row, _, _, err = db.Execute(sql, input)
 	return
 }
-func (w *PluginContext) GetDataFromDb(tpl []string, input map[string]interface{}) (data []map[string]interface{}, err error) {
+func (w *PluginContext) GetDataFromDb(tpl []string, input map[string]interface{}) (data []db.QueryRow, err error) {
 	db, err := w.GetDB()
 	if err != nil {
 		return

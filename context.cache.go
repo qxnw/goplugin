@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/memcache"
 	"github.com/qxnw/lib4go/transform"
@@ -56,10 +57,7 @@ func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interfac
 	}
 	tf := transform.NewMaps(input)
 	key = tf.Translate(key)
-	cvalue, err = client.Get(key)
-	if err != nil {
-		return
-	}
+	cvalue, _ = client.Get(key)
 	if cvalue != "" {
 		return
 	}
@@ -71,11 +69,14 @@ func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interfac
 	if err != nil {
 		return
 	}
-	client.Set(key, string(buffer), expireAt)
+	errx := client.Set(key, string(buffer), expireAt)
+	if errx != nil {
+		w.Errorf("保存缓存数据异常：%v", errx)
+	}
 	return
 }
 
-func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]interface{}) (data map[string]interface{}, err error) {
+func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]interface{}) (data db.QueryRow, err error) {
 	result, err := w.GetMapFromCache(tpl, input)
 	if err != nil {
 		return
@@ -102,14 +103,14 @@ func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, e
 }
 
 func (w *PluginContext) getSql(tpl []string) (sql string, err error) {
-	if len(tpl) >= 1 {
+	if len(tpl) < 1 {
 		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素，SQL语句:%v", tpl)
 		return
 	}
 	sql = tpl[0]
 	return
 }
-func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []map[string]interface{}, err error) {
+func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []db.QueryRow, err error) {
 	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
 	if err != nil {
 		return
@@ -121,10 +122,7 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	}
 	tf := transform.NewMaps(input)
 	key = tf.Translate(key)
-	dstr, err := client.Get(key)
-	if err != nil {
-		return
-	}
+	dstr, _ := client.Get(key)
 	if dstr != "" {
 		err = json.Unmarshal([]byte(dstr), &data)
 		return
@@ -141,6 +139,9 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	if err != nil {
 		return
 	}
-	client.Set(key, string(cvalue), expireAt)
+	errx := client.Set(key, string(cvalue), expireAt)
+	if errx != nil {
+		w.Errorf("保存缓存数据异常：%v", errx)
+	}
 	return
 }
