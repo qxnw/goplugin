@@ -22,7 +22,7 @@ func (p *wxBaseCore) GetServices() []string {
 }
 
 //Handle 业务处理
-func (p *wxBaseCore) Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result string, param map[string]interface{}, err error) {
+func (p *wxBaseCore) Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result interface{}, param map[string]interface{}, err error) {
 	if h, ok := registry.ServiceHandlers[service]; ok {
 		status, r, err := h.Handle(service, c, invoker)
 		if err != nil || status != 200 {

@@ -23,7 +23,7 @@ type RPCInvoker interface {
 
 type PluginWorker interface {
 	GetServices() []string
-	Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result string, params map[string]interface{}, err error)
+	Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error)
 }
 
 //Handler 处理程序接口

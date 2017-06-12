@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/logger"
-	"github.com/qxnw/lib4go/memcache"
 	"github.com/qxnw/lib4go/mq"
 	"github.com/qxnw/lib4go/transform"
 )
@@ -28,8 +26,6 @@ type PluginContext struct {
 	Input        transform.ITransformGetter
 	Params       transform.ITransformGetter
 	Body         string
-	db           *db.DB
-	cache        *memcache.MemcacheClient
 	Args         map[string]string
 	func_var_get func(c string, n string) (string, error)
 	RPC          RPCInvoker
@@ -61,7 +57,6 @@ func (w *PluginContext) CheckMapMustFields(input map[string]interface{}, names .
 func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
-	wx.db = nil
 	wx.producer = nil
 
 	defer func() {

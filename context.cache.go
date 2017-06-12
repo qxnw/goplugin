@@ -2,43 +2,48 @@ package goplugin
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/qxnw/lib4go/concurrent/cmap"
 	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/memcache"
 	"github.com/qxnw/lib4go/transform"
 )
 
+var ErrDataNotExist = errors.New("查询的数据不存在")
+
 func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
-	if w.cache != nil {
-		return w.cache, nil
-	}
 
 	name, ok := w.Args["cache"]
 	if !ok {
 		return nil, fmt.Errorf("服务%s未配置cache参数(%v)", w.service, w.Args)
 	}
-	conf, err := w.func_var_get("cache", name)
-	if err != nil {
-		return nil, err
-	}
-	configMap, err := jsons.Unmarshal([]byte(conf))
-	if err != nil {
-		return nil, err
-	}
-	server, ok := configMap["server"]
-	if !ok {
-		err = fmt.Errorf("cache[%s]配置文件错误，未包含server节点:%s", name, conf)
-		return nil, err
-	}
-	c, err = memcache.New(strings.Split(server.(string), ";"))
-	if err != nil {
-		return nil, err
-	}
-	w.cache = c
+	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
+		name := input[0].(string)
+		conf, err := w.func_var_get("cache", name)
+		if err != nil {
+			return nil, err
+		}
+		configMap, err := jsons.Unmarshal([]byte(conf))
+		if err != nil {
+			return nil, err
+		}
+		server, ok := configMap["server"]
+		if !ok {
+			err = fmt.Errorf("cache[%s]配置文件错误，未包含server节点:%s", name, conf)
+			return nil, err
+		}
+		c, err = memcache.New(strings.Split(server.(string), ";"))
+		if err != nil {
+			return nil, err
+		}
+		return
+	}, name)
+	c = memCached.(*memcache.MemcacheClient)
 	return
 }
 
@@ -77,14 +82,14 @@ func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interfac
 }
 
 func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]interface{}) (data db.QueryRow, err error) {
-	result, err := w.GetMapFromCache(tpl, input)
+	result, _, _, err := w.GetMapFromCache(tpl, input)
 	if err != nil {
 		return
 	}
 	if len(result) > 0 {
 		return result[0], nil
 	}
-	return nil, fmt.Errorf("返回的数据条数为0:(%s)", tpl)
+	return nil, ErrDataNotExist
 }
 
 func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, expireAt int, err error) {
@@ -102,15 +107,18 @@ func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, e
 	return
 }
 
-func (w *PluginContext) getSql(tpl []string) (sql string, err error) {
+func (w *PluginContext) getSql(tpl []string) (sql string, key string, err error) {
 	if len(tpl) < 1 {
 		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素，SQL语句:%v", tpl)
 		return
 	}
 	sql = tpl[0]
+	if len(tpl) > 1 {
+		key = tpl[1]
+	}
 	return
 }
-func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []db.QueryRow, err error) {
+func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []db.QueryRow, query string, params []interface{}, err error) {
 	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
 	if err != nil {
 		return
@@ -131,8 +139,11 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	if err != nil {
 		return
 	}
-	data, _, _, err = db.Query(sql, input)
+	data, query, params, err = db.Query(sql, input)
 	if err != nil {
+		return
+	}
+	if len(data) == 0 {
 		return
 	}
 	cvalue, err := jsons.Marshal(data)
@@ -144,4 +155,10 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 		w.Errorf("保存缓存数据异常：%v", errx)
 	}
 	return
+}
+
+var memCache cmap.ConcurrentMap
+
+func init() {
+	memCache = cmap.New()
 }
