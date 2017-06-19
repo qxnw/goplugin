@@ -40,6 +40,6 @@ func (p *wxBaseCore) Handle(name string, mode string, service string, c Context,
 }
 
 //GetWorker 获取当前worker
-func GetWorker() PluginWorker {
+func GetWorker() Worker {
 	return &wxBaseCore{}
 }

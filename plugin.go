@@ -21,7 +21,7 @@ type RPCInvoker interface {
 	Delete(service string, input map[string]string, failFast bool) (status int, err error)
 }
 
-type PluginWorker interface {
+type Worker interface {
 	GetServices() []string
 	Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error)
 }
