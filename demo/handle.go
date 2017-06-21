@@ -32,7 +32,7 @@ func (n *sendSms) Handle(service string, ctx goplugin.Context, invoker goplugin.
 	if err != nil {
 		return
 	}
-
+	context.get
 	data, err := context.GetDataFromDb(QUERY_SQL, make(map[string]interface{}))
 	if err != nil {
 		return
