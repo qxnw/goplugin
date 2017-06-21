@@ -1,5 +1,11 @@
 package goplugin
 
+import (
+	"time"
+
+	"github.com/qxnw/lib4go/rpc"
+)
+
 type Context interface {
 	GetInput() interface{}
 	GetArgs() interface{}
@@ -8,17 +14,12 @@ type Context interface {
 	GetJson() string
 	GetExt() map[string]interface{}
 }
+
 type RPCInvoker interface {
 	//Request 发送请求
-	Request(service string, input map[string]string, failFast bool) (status int, result string, err error)
-	//Query 发送请求
-	Query(service string, input map[string]string, failFast bool) (status int, result string, err error)
-	//Update 发送请求
-	Update(service string, input map[string]string, failFast bool) (status int, err error)
-	//Insert 发送请求
-	Insert(service string, input map[string]string, failFast bool) (status int, err error)
-	//Delete 发送请求
-	Delete(service string, input map[string]string, failFast bool) (status int, err error)
+	Request(service string, input map[string]string, failFast bool) (status int, result string, param map[string]string, err error)
+	AsyncRequest(service string, input map[string]string, failFast bool) rpc.IRPCResponse
+	WaitWithFailFast(callback func(string, int, string, error), timeout time.Duration, rs ...rpc.IRPCResponse) error
 }
 
 type Worker interface {
