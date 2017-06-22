@@ -22,7 +22,7 @@ func (w *PluginContext) SendMQMessage(queueName string, msg string, timeoutName 
 	if err != nil {
 		return fmt.Errorf("初始化MQ对象失败(err:%v)", err)
 	}
-	err = mqProducer.Send(w.Args[queueName], msg, time.Duration(timeout))
+	err = mqProducer.Send(w.Args[queueName], msg, time.Duration(timeout)*time.Second)
 	if err != nil {
 		return fmt.Errorf("发送MQ失败.队列名称:%s,消息内容:%s", w.Args[queueName], msg)
 	}
