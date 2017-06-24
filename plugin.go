@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/qxnw/lib4go/rpc"
+	"github.com/qxnw/lib4go/transform"
 )
 
 type Context interface {
-	GetInput() interface{}
-	GetArgs() interface{}
-	GetBody() interface{}
-	GetParams() interface{}
+	GetInput() transform.ITransformGetter
+	GetArgs() map[string]string
+	GetBody() string
+	GetParams() transform.ITransformGetter
 	GetJson() string
 	GetExt() map[string]interface{}
 }

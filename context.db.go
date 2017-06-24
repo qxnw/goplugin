@@ -101,5 +101,5 @@ func (w *PluginContext) GetDB() (d *db.DB, err error) {
 var dbCache cmap.ConcurrentMap
 
 func init() {
-	dbCache = cmap.New()
+	dbCache = cmap.New(32)
 }

@@ -133,6 +133,10 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	dstr, _ := client.Get(key)
 	if dstr != "" {
 		err = json.Unmarshal([]byte(dstr), &data)
+		if len(data) == 0 {
+			w.Logger.Infof("从缓存获取数据的条数为0:%s,%s", key, dstr)
+		}
+
 		return
 	}
 	db, err := w.GetDB()
@@ -144,6 +148,7 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 		return
 	}
 	if len(data) == 0 {
+		w.Logger.Infof("从DB获取数据的条数为0:%s,%v", query, params)
 		return
 	}
 	cvalue, err := jsons.Marshal(data)
@@ -160,5 +165,5 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 var memCache cmap.ConcurrentMap
 
 func init() {
-	memCache = cmap.New()
+	memCache = cmap.New(2)
 }

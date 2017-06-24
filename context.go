@@ -64,22 +64,10 @@ func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) 
 			wx.Close()
 		}
 	}()
-	wx.Input, err = wx.getGetParams(ctx.GetInput())
-	if err != nil {
-		return
-	}
-	wx.Params, err = wx.getGetParams(ctx.GetParams())
-	if err != nil {
-		return
-	}
-	wx.Body, err = wx.getGetBody(ctx.GetBody())
-	if err != nil {
-		return
-	}
-	wx.Args, err = wx.GetArgs(ctx.GetArgs())
-	if err != nil {
-		return
-	}
+	wx.Input = ctx.GetInput()
+	wx.Params = ctx.GetParams()
+	wx.Args = ctx.GetArgs()
+	wx.Body = ctx.GetBody()
 	wx.func_var_get, err = wx.getVarParam(ctx.GetExt())
 	if err != nil {
 		return
@@ -107,37 +95,6 @@ func (w *PluginContext) getVarParam(ext map[string]interface{}) (func(c string, 
 		return f, nil
 	}
 	return nil, errors.New("未找到__func_var_get_传入类型错误")
-}
-func (w *PluginContext) GetArgs(args interface{}) (params map[string]string, err error) {
-	params, ok := args.(map[string]string)
-	if !ok {
-		err = fmt.Errorf("未设置Args参数")
-		return
-	}
-	return
-}
-
-func (w *PluginContext) getGetBody(body interface{}) (t string, err error) {
-	if body == nil {
-		return "", errors.New("body 数据为空")
-	}
-	t, ok := body.(string)
-	if !ok {
-		return "", errors.New("body 不是字符串数据")
-	}
-	return
-}
-
-func (w *PluginContext) getGetParams(input interface{}) (t transform.ITransformGetter, err error) {
-	if input == nil {
-		err = fmt.Errorf("输入参数为空:%v", input)
-		return nil, err
-	}
-	t, ok := input.(transform.ITransformGetter)
-	if !ok {
-		return t, fmt.Errorf("输入参数为空:input（%v）不是transform.ITransformGetter类型", input)
-	}
-	return t, nil
 }
 
 func (w *PluginContext) Close() {
