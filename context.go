@@ -21,7 +21,6 @@ func init() {
 }
 
 type PluginContext struct {
-	service     string
 	ctx         Context
 	Input       transform.ITransformGetter
 	Params      transform.ITransformGetter

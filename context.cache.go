@@ -19,7 +19,7 @@ var ErrDataNotExist = errors.New("查询的数据不存在")
 func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
 	name, ok := w.Args["cache"]
 	if !ok {
-		return nil, fmt.Errorf("服务%s未配置cache参数(%v)", w.service, w.Args)
+		return nil, fmt.Errorf("未配置cache参数(%v)", w.Args)
 	}
 	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
 		name := input[0].(string)

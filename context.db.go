@@ -64,7 +64,7 @@ func (w *PluginContext) GetDataFromDb(tpl []string, input map[string]interface{}
 func (w *PluginContext) GetDB() (d *db.DB, err error) {
 	name, ok := w.Args["db"]
 	if !ok {
-		return nil, fmt.Errorf("服务%s未配置db参数(%v)", w.service, w.Args)
+		return nil, fmt.Errorf("未配置db参数(%v)", w.Args)
 	}
 	_, dbc, err := dbCache.SetIfAbsentCb(name, func(input ...interface{}) (d interface{}, err error) {
 		name := input[0].(string)
