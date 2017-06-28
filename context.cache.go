@@ -17,14 +17,13 @@ import (
 var ErrDataNotExist = errors.New("查询的数据不存在")
 
 func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
-
 	name, ok := w.Args["cache"]
 	if !ok {
 		return nil, fmt.Errorf("服务%s未配置cache参数(%v)", w.service, w.Args)
 	}
 	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
 		name := input[0].(string)
-		conf, err := w.func_var_get("cache", name)
+		conf, err := w.GetVarValue("cache", name)
 		if err != nil {
 			return nil, err
 		}
@@ -121,6 +120,10 @@ func (w *PluginContext) getSql(tpl []string) (sql string, key string, err error)
 func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []db.QueryRow, query string, params []interface{}, err error) {
 	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
 	if err != nil {
+		return
+	}
+	if key == "" {
+		err = fmt.Errorf("key不能为空:%v", tpl)
 		return
 	}
 

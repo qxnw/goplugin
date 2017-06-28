@@ -21,15 +21,15 @@ func init() {
 }
 
 type PluginContext struct {
-	service      string
-	ctx          Context
-	Input        transform.ITransformGetter
-	Params       transform.ITransformGetter
-	Body         string
-	Args         map[string]string
-	func_var_get func(c string, n string) (string, error)
-	RPC          RPCInvoker
-	producer     mq.MQProducer
+	service     string
+	ctx         Context
+	Input       transform.ITransformGetter
+	Params      transform.ITransformGetter
+	Body        string
+	Args        map[string]string
+	GetVarValue func(c string, n string) (string, error)
+	RPC         RPCInvoker
+	producer    mq.MQProducer
 	*logger.Logger
 }
 
@@ -58,7 +58,6 @@ func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) 
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
 	wx.producer = nil
-
 	defer func() {
 		if err != nil {
 			wx.Close()
@@ -68,7 +67,7 @@ func GetContext(ctx Context, invoker RPCInvoker) (wx *PluginContext, err error) 
 	wx.Params = ctx.GetParams()
 	wx.Args = ctx.GetArgs()
 	wx.Body = ctx.GetBody()
-	wx.func_var_get, err = wx.getVarParam(ctx.GetExt())
+	wx.GetVarValue, err = wx.getVarParam()
 	if err != nil {
 		return
 	}
@@ -86,8 +85,9 @@ func (w *PluginContext) getLogger() (*logger.Logger, error) {
 	}
 	return nil, fmt.Errorf("输入的context里没有包含hydra_sid(%v)", w.ctx.GetExt())
 }
-func (w *PluginContext) getVarParam(ext map[string]interface{}) (func(c string, n string) (string, error), error) {
-	funcVar := ext["__func_var_get_"]
+func (w *PluginContext) getVarParam() (func(c string, n string) (string, error), error) {
+
+	funcVar := w.ctx.GetExt()["__func_var_get_"]
 	if funcVar == nil {
 		return nil, errors.New("未找到__func_var_get_")
 	}

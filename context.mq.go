@@ -39,7 +39,7 @@ func (w *PluginContext) GetMQProducer() (p mq.MQProducer, err error) {
 	if !ok {
 		return nil, fmt.Errorf("服务%s未配置mq参数(%v)", w.service, w.Args)
 	}
-	conf, err := w.func_var_get("mq", name)
+	conf, err := w.GetVarValue("mq", name)
 	if err != nil {
 		return nil, err
 	}

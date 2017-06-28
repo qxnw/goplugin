@@ -68,7 +68,7 @@ func (w *PluginContext) GetDB() (d *db.DB, err error) {
 	}
 	_, dbc, err := dbCache.SetIfAbsentCb(name, func(input ...interface{}) (d interface{}, err error) {
 		name := input[0].(string)
-		conf, err := w.func_var_get("db", name)
+		conf, err := w.GetVarValue("db", name)
 		if err != nil {
 			return nil, err
 		}
