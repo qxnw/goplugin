@@ -22,7 +22,7 @@ func (cmq *ContextMQ) Reset(ctx *PluginContext) {
 
 //Send 发送MQ消息
 func (cmq *ContextMQ) Send(queue string, msg string, timeout int) error {
-	mqProducer, err := cmq.GetMQProducer()
+	mqProducer, err := cmq.GetProducer()
 	if err != nil {
 		return fmt.Errorf("初始化MQ对象失败(err:%v)", err)
 	}
@@ -47,8 +47,8 @@ func (cmq *ContextMQ) SendBySetting(queueName string, msg string, timeoutName st
 
 }
 
-//GetMQProducer 获取GetMQProducer
-func (cmq *ContextMQ) GetMQProducer() (p mq.MQProducer, err error) {
+//GetProducer GetProducer
+func (cmq *ContextMQ) GetProducer() (p mq.MQProducer, err error) {
 	name, ok := cmq.ctx.Args["mq"]
 	if !ok {
 		return nil, fmt.Errorf("args中未配置参数:mq,%v", cmq.ctx.Args)
