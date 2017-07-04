@@ -46,7 +46,7 @@ func (cd *ContextDB) GetDB() (d *db.DB, err error) {
 		}
 		max, ok := configMap["max"]
 		if !ok {
-			return nil, fmt.Errorf("db配置文件错误，未包含connString节点:var/db/%s", name)
+			return nil, fmt.Errorf("db配置文件错误，未包含max节点:var/db/%s", name)
 		}
 		p, c, m := provider.(string), connString.(string), types.ToInt(max, 2)
 		d, err = db.NewDB(p, c, m)
