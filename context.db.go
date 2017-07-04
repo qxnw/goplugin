@@ -7,68 +7,28 @@ import (
 	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/transform"
+	"github.com/qxnw/lib4go/types"
 )
 
-func (w *PluginContext) ScalarFromDb(tpl []string, input map[string]interface{}) (data interface{}, err error) {
-	db, err := w.GetDB()
-	if err != nil {
-		return
-	}
-	sql, _, err := w.getSql(tpl)
-	if err != nil {
-		return
-	}
-	data, _, _, err = db.Scalar(sql, input)
-	return
-}
-func (w *PluginContext) ExecuteToDb(tpl []string, input map[string]interface{}) (row int64, err error) {
-	db, err := w.GetDB()
-	if err != nil {
-		return
-	}
-	sql, key, err := w.getSql(tpl)
-	if err != nil {
-		return
-	}
-	row, _, _, err = db.Execute(sql, input)
-	if err != nil {
-		return
-	}
-	if key != "" {
-		c, err := w.GetCache()
-		if err != nil {
-			w.Error("清除缓存失败:", err)
-			return row, nil
-		}
-		tf := transform.NewMaps(input)
-		err = c.Delete(tf.Translate(key))
-		if err != nil {
-			w.Error("清除缓存失败:", err)
-		}
-	}
-	return
-}
-func (w *PluginContext) GetDataFromDb(tpl []string, input map[string]interface{}) (data []db.QueryRow, err error) {
-	db, err := w.GetDB()
-	if err != nil {
-		return
-	}
-	sql, _, err := w.getSql(tpl)
-	if err != nil {
-		return
-	}
-	data, _, _, err = db.Query(sql, input)
-	return
+//ContextDB 数据库操作
+type ContextDB struct {
+	ctx *PluginContext
 }
 
-func (w *PluginContext) GetDB() (d *db.DB, err error) {
-	name, ok := w.Args["db"]
+//Reset 重置context
+func (cd *ContextDB) Reset(ctx *PluginContext) {
+	cd.ctx = ctx
+}
+
+//GetDB 获取数据库操作实例
+func (cd *ContextDB) GetDB() (d *db.DB, err error) {
+	name, ok := cd.ctx.Args["db"]
 	if !ok {
-		return nil, fmt.Errorf("未配置db参数(%v)", w.Args)
+		return nil, fmt.Errorf("未配置db参数(%v)", cd.ctx.Args)
 	}
 	_, dbc, err := dbCache.SetIfAbsentCb(name, func(input ...interface{}) (d interface{}, err error) {
 		name := input[0].(string)
-		conf, err := w.GetVarValue("db", name)
+		conf, err := cd.ctx.GetVarValue("db", name)
 		if err != nil {
 			return nil, err
 		}
@@ -84,9 +44,14 @@ func (w *PluginContext) GetDB() (d *db.DB, err error) {
 		if !ok {
 			return nil, fmt.Errorf("db配置文件错误，未包含connString节点:var/db/%s", name)
 		}
-		d, err = db.NewDB(provider.(string), connString.(string), 2)
+		max, ok := configMap["max"]
+		if !ok {
+			return nil, fmt.Errorf("db配置文件错误，未包含connString节点:var/db/%s", name)
+		}
+		p, c, m := provider.(string), connString.(string), types.ToInt(max, 2)
+		d, err = db.NewDB(p, c, m)
 		if err != nil {
-			err = fmt.Errorf("创建DB失败:err:%v", err)
+			err = fmt.Errorf("创建DB失败:%s,%s,%d,err:%v", p, c, m, err)
 			return
 		}
 		return
@@ -98,8 +63,99 @@ func (w *PluginContext) GetDB() (d *db.DB, err error) {
 	return
 }
 
+//Scalar 获取首行首列值
+func (cd *ContextDB) Scalar(tpl []string, input map[string]interface{}) (data interface{}, err error) {
+	db, err := cd.GetDB()
+	if err != nil {
+		return
+	}
+	sql, _, err := cd.getSQL(tpl)
+	if err != nil {
+		return
+	}
+	data, _, _, err = db.Scalar(sql, input)
+	if err != nil {
+		err = fmt.Errorf("执行scalar失败：%s,%v,err:%v", sql, input, err)
+		return
+	}
+	return
+}
+
+//Execute  执行数据库操作
+func (cd *ContextDB) Execute(tpl []string, input map[string]interface{}) (row int64, err error) {
+	db, err := cd.GetDB()
+	if err != nil {
+		return
+	}
+	sql, key, err := cd.getSQL(tpl)
+	if err != nil {
+		return
+	}
+	row, _, _, err = db.Execute(sql, input)
+	if err != nil {
+		err = fmt.Errorf("执行SQL语句失败:%s,:%v,err:%v", sql, input, err)
+		return
+	}
+	if key != "" {
+		c, err := cd.ctx.GetCache()
+		if err != nil {
+			cd.ctx.Error("清除缓存,获取缓存操作实例失败:", err)
+			return row, nil
+		}
+		tf := transform.NewMaps(input)
+		err = c.Delete(tf.Translate(key))
+		if err != nil {
+			cd.ctx.Errorf("清除缓存失败：%s,%v", key, err)
+		}
+	}
+	return
+}
+
+//getSQL 获取SQL语句
+func (cd *ContextDB) getSQL(tpl []string) (sql string, key string, err error) {
+	if len(tpl) < 1 {
+		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素(SQL语句):%v", tpl)
+		return
+	}
+	sql = tpl[0]
+	if len(tpl) > 1 {
+		key = tpl[1]
+	}
+	return
+}
+
+//GetFirstRow 获取首行数据，数据不存在时返回ErrDataNotExist错误
+func (cd *ContextDB) GetFirstRow(tpl []string, input map[string]interface{}) (data db.QueryRow, err error) {
+	result, err := cd.GetDataRows(tpl, input)
+	if err != nil {
+		return
+	}
+	if len(result) > 0 {
+		return result[0], nil
+	}
+	return nil, ErrDataNotExist
+}
+
+//GetDataRows 获取多行数据
+func (cd *ContextDB) GetDataRows(tpl []string, input map[string]interface{}) (data []db.QueryRow, err error) {
+	db, err := cd.GetDB()
+	if err != nil {
+		err = fmt.Errorf("获取数据库操作实例失败:err:%v", err)
+		return
+	}
+	sql, _, err := cd.getSQL(tpl)
+	if err != nil {
+		return
+	}
+	data, _, _, err = db.Query(sql, input)
+	if err != nil {
+		err = fmt.Errorf("执行查询发生错误:%s,%v,err:%v", sql, input, err)
+	}
+	return
+}
+
 var dbCache cmap.ConcurrentMap
 
 func init() {
-	dbCache = cmap.New(32)
+	dbCache = cmap.New(2)
 }

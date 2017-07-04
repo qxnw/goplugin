@@ -14,16 +14,28 @@ import (
 	"github.com/qxnw/lib4go/transform"
 )
 
+//ContextCache 缓存
+type ContextCache struct {
+	ctx *PluginContext
+}
+
+//ErrDataNotExist 数据不存在
 var ErrDataNotExist = errors.New("查询的数据不存在")
 
-func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
-	name, ok := w.Args["cache"]
+//Reset 重置context
+func (cache *ContextCache) Reset(ctx *PluginContext) {
+	cache.ctx = ctx
+}
+
+//GetCache 获取缓存操作对象
+func (cache *ContextCache) GetCache() (c *memcache.MemcacheClient, err error) {
+	name, ok := cache.ctx.Args["cache"]
 	if !ok {
-		return nil, fmt.Errorf("未配置cache参数(%v)", w.Args)
+		return nil, fmt.Errorf("未配置cache参数(%v)", cache.ctx)
 	}
 	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
 		name := input[0].(string)
-		conf, err := w.GetVarValue("cache", name)
+		conf, err := cache.ctx.GetVarValue("cache", name)
 		if err != nil {
 			return nil, err
 		}
@@ -46,16 +58,13 @@ func (w *PluginContext) GetCache() (c *memcache.MemcacheClient, err error) {
 	return
 }
 
-func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interface{}) (cvalue string, err error) {
-	db, err := w.GetDB()
+//GetJSON 从缓存中获取json字符串，缓存中不存在时从数据库中获取
+func (cache *ContextCache) GetJSON(tpl []string, input map[string]interface{}) (cvalue string, err error) {
+	sql, key, expireAt, err := cache.getCacheSetting(tpl)
 	if err != nil {
 		return
 	}
-	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
-	if err != nil {
-		return
-	}
-	client, err := w.GetCache()
+	client, err := cache.GetCache()
 	if err != nil {
 		return
 	}
@@ -63,6 +72,10 @@ func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interfac
 	key = tf.Translate(key)
 	cvalue, _ = client.Get(key)
 	if cvalue != "" {
+		return
+	}
+	db, err := cache.ctx.GetDB()
+	if err != nil {
 		return
 	}
 	data, _, _, err := db.Query(sql, input)
@@ -73,15 +86,17 @@ func (w *PluginContext) GetJsonFromCache(tpl []string, input map[string]interfac
 	if err != nil {
 		return
 	}
-	errx := client.Set(key, string(buffer), expireAt)
+	cvalue = string(buffer)
+	errx := client.Set(key, cvalue, expireAt)
 	if errx != nil {
-		w.Errorf("保存缓存数据异常：%v", errx)
+		cache.ctx.Errorf("保存缓存数据异常：%v", errx)
 	}
 	return
 }
 
-func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]interface{}) (data db.QueryRow, err error) {
-	result, _, _, err := w.GetMapFromCache(tpl, input)
+//GetFirstRow 从缓存中获取首行数据，缓存中不存在时从数据中获取并保存到缓存中，数据不存在时返回ErrDataNotExist错误
+func (cache *ContextCache) GetFirstRow(tpl []string, input map[string]interface{}) (data db.QueryRow, err error) {
+	result, _, _, err := cache.GetDataRows(tpl, input)
 	if err != nil {
 		return
 	}
@@ -91,43 +106,33 @@ func (w *PluginContext) GetFirstMapFromCache(tpl []string, input map[string]inte
 	return nil, ErrDataNotExist
 }
 
-func (w *PluginContext) getSqlKeyExpire(tpl []string) (sql string, key string, expireAt int, err error) {
+func (cache *ContextCache) getCacheSetting(tpl []string) (sql string, key string, expireAt int, err error) {
 	if len(tpl) < 3 {
-		err = fmt.Errorf("输入的SQL模板错误，必须包含3个元素，SQL语句/缓存KEY/过期时间:%v", tpl)
+		err = fmt.Errorf("包含缓存信息的SQL模式配置有误，必须包含3个元素，SQL语句/缓存KEY/过期时间:%v", tpl)
 		return
 	}
 	sql = tpl[0]
 	key = tpl[1]
+	if key == "" {
+		err = fmt.Errorf("包含缓存信息的SQL模式配置有误，key不能为空:%v", tpl)
+		return
+	}
 	expireAt, err = strconv.Atoi(tpl[2])
 	if err != nil {
-		err = fmt.Errorf("输入的SQL模板错误，过期时间必须为数字:%v", tpl)
+		err = fmt.Errorf("包含缓存信息的SQL模式配置有误，过期时间必须为数字:%v,err:%v", tpl, err)
 		return
 	}
 	return
 }
 
-func (w *PluginContext) getSql(tpl []string) (sql string, key string, err error) {
-	if len(tpl) < 1 {
-		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素，SQL语句:%v", tpl)
-		return
-	}
-	sql = tpl[0]
-	if len(tpl) > 1 {
-		key = tpl[1]
-	}
-	return
-}
-func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface{}) (data []db.QueryRow, query string, params []interface{}, err error) {
-	sql, key, expireAt, err := w.getSqlKeyExpire(tpl)
+//GetDataRows 从缓存中获取数据集,缓存中不存在时从数据库中获取并保存到缓存中
+func (cache *ContextCache) GetDataRows(tpl []string, input map[string]interface{}) (data []db.QueryRow, query string, params []interface{}, err error) {
+	sql, key, expireAt, err := cache.getCacheSetting(tpl)
 	if err != nil {
 		return
 	}
-	if key == "" {
-		err = fmt.Errorf("key不能为空:%v", tpl)
-		return
-	}
 
-	client, err := w.GetCache()
+	client, err := cache.GetCache()
 	if err != nil {
 		return
 	}
@@ -136,22 +141,19 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	dstr, _ := client.Get(key)
 	if dstr != "" {
 		err = json.Unmarshal([]byte(dstr), &data)
-		if len(data) == 0 {
-			w.Logger.Infof("从缓存获取数据的条数为0:%s,%s", key, dstr)
-		}
-
 		return
 	}
-	db, err := w.GetDB()
+	db, err := cache.ctx.GetDB()
 	if err != nil {
+		err = fmt.Errorf("创建数据库连接对象异常:%v", err)
 		return
 	}
 	data, query, params, err = db.Query(sql, input)
 	if err != nil {
+		err = fmt.Errorf("从数据库中查询数据异常:%s,%v,err:%v", sql, input, err)
 		return
 	}
 	if len(data) == 0 {
-		w.Logger.Infof("从DB获取数据的条数为0:%s,%v", query, params)
 		return
 	}
 	cvalue, err := jsons.Marshal(data)
@@ -160,7 +162,7 @@ func (w *PluginContext) GetMapFromCache(tpl []string, input map[string]interface
 	}
 	errx := client.Set(key, string(cvalue), expireAt)
 	if errx != nil {
-		w.Errorf("保存缓存数据异常：%v", errx)
+		cache.ctx.Errorf("数据保存到缓存中异常:%s,%s,err:%v", key, string(cvalue), err)
 	}
 	return
 }

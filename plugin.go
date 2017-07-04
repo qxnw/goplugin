@@ -30,7 +30,7 @@ type Worker interface {
 
 //Handler 处理程序接口
 type Handler interface {
-	Handle(service string, c Context, invoker RPCInvoker) (status int, result interface{}, err error)
+	Handle(service string, c Context, invoker RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error)
 }
 
 type Registry struct {

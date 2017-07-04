@@ -27,7 +27,7 @@ func (n *sendSms) initParams(ctx goplugin.Context, invoker goplugin.RPCInvoker) 
 	return
 }
 
-func (n *sendSms) Handle(service string, ctx goplugin.Context, invoker goplugin.RPCInvoker) (status int, result interface{}, err error) {
+func (n *sendSms) Handle(service string, ctx goplugin.Context, invoker goplugin.RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error) {
 	context, status, err := n.initParams(ctx, invoker)
 	if err != nil {
 		return
@@ -45,17 +45,17 @@ func (n *sendSms) Handle(service string, ctx goplugin.Context, invoker goplugin.
 		}
 		_, rs, err := invoker.Request("/sms/ytx/send", input, true)
 		if err != nil {
-			return 500, nil, err
+			return 0, 500, nil, err
 		}
 		input2 := map[string]interface{}{
 			"mobile": mobile,
 		}
 		r, err := context.ExecuteToDb(UPDATE_SQL, input2)
 		if err != nil {
-			return 500, nil, err
+			return 0, 500, nil, err
 		}
 		if r != 1 {
-			return 500, nil, fmt.Errorf("发送失败:%v", r)
+			return 0, 500, nil, fmt.Errorf("发送失败:%v", r)
 		}
 		if strings.Contains(rs, "000000") {
 			context.Logger.Infof("发送成功:%s", mobile)
@@ -65,7 +65,7 @@ func (n *sendSms) Handle(service string, ctx goplugin.Context, invoker goplugin.
 
 	}
 
-	return utility.OK, data, nil
+	return 0, utility.OK, data, nil
 }
 
 var QUERY_SQL = []string{

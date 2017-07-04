@@ -20,7 +20,7 @@ func (p *cbsCore) Handle(name string, mode string, service string, c goplugin.Co
 	if h, ok := GetHandlers()[service]; ok {
 		status, r, err := h.Handle(service, c, invoker)
 		if err != nil || status != 200 {
-			return status, result, nil, fmt.Errorf("send.sms:%v", err)
+			return status, result, nil, fmt.Errorf("send.sms:%d,err:%v", status, err)
 		}
 		return status, r, nil, err
 
