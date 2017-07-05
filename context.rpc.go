@@ -18,7 +18,7 @@ func (cr *ContextRPC) Reset(ctx *PluginContext) {
 
 //Request RPC请求
 func (cr *ContextRPC) Request(service string, input map[string]string, failFast bool) (status int, r string, param map[string]string, err error) {
-	status, r, param, err = cr.ctx.RPC.Request(service, input, failFast)
+	status, r, param, err = cr.ctx.rpc.Request(service, input, failFast)
 	if err != nil || status != 200 {
 		err = fmt.Errorf("rpc请求(%s)失败:%d,err:%v", service, status, err)
 		return
