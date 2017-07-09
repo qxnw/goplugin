@@ -162,7 +162,7 @@ func (cache *ContextCache) GetDataRows(tpl []string, input map[string]interface{
 	}
 	errx := client.Set(key, string(cvalue), expireAt)
 	if errx != nil {
-		cache.ctx.Errorf("数据保存到缓存中异常:%s,%s,err:%v", key, string(cvalue), err)
+		cache.ctx.Errorf("数据保存到缓存中异常:%s,%s,err:%v", key, string(cvalue), errx)
 	}
 	return
 }
