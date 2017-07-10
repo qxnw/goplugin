@@ -45,7 +45,7 @@ type PluginContext struct {
 //CheckInput 检查输入参数
 func (w *PluginContext) CheckInput(names ...string) error {
 	for _, v := range names {
-		if _, err := w.Input.Get(v); err != nil {
+		if r, err := w.Input.Get(v); err != nil || r == "" {
 			err := fmt.Errorf("输入参数:%s不能为空", v)
 			return err
 		}
@@ -56,7 +56,7 @@ func (w *PluginContext) CheckInput(names ...string) error {
 //CheckArgs 检查args参数
 func (w *PluginContext) CheckArgs(names ...string) error {
 	for _, v := range names {
-		if _, ok := w.Args[v]; !ok {
+		if r, ok := w.Args[v]; !ok || r == "" {
 			err := fmt.Errorf("args配置中缺少参数:%s", v)
 			return err
 		}
