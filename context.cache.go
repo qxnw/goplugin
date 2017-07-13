@@ -28,14 +28,18 @@ func (cache *ContextCache) Reset(ctx *PluginContext) {
 }
 
 //GetCache 获取缓存操作对象
-func (cache *ContextCache) GetCache() (c *memcache.MemcacheClient, err error) {
-	name, ok := cache.ctx.Args["cache"]
+func (cache *ContextCache) GetCache(names ...string) (c *memcache.MemcacheClient, err error) {
+	sName := "cache"
+	if len(names) > 0 {
+		sName = names[0]
+	}
+	name, ok := cache.ctx.Args[sName]
 	if !ok {
 		return nil, fmt.Errorf("未配置cache参数(%v)", cache.ctx)
 	}
 	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
 		name := input[0].(string)
-		conf, err := cache.ctx.GetVarValue("cache", name)
+		conf, err := cache.ctx.GetVarValue("cache", sName)
 		if err != nil {
 			return nil, err
 		}

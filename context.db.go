@@ -21,14 +21,18 @@ func (cd *ContextDB) Reset(ctx *PluginContext) {
 }
 
 //GetDB 获取数据库操作实例
-func (cd *ContextDB) GetDB() (d *db.DB, err error) {
-	name, ok := cd.ctx.Args["db"]
+func (cd *ContextDB) GetDB(names ...string) (d *db.DB, err error) {
+	sName := "db"
+	if len(names) > 0 {
+		sName = names[0]
+	}
+	name, ok := cd.ctx.Args[sName]
 	if !ok {
 		return nil, fmt.Errorf("未配置db参数(%v)", cd.ctx.Args)
 	}
 	_, dbc, err := dbCache.SetIfAbsentCb(name, func(input ...interface{}) (d interface{}, err error) {
 		name := input[0].(string)
-		conf, err := cd.ctx.GetVarValue("db", name)
+		conf, err := cd.ctx.GetVarValue("db", sName)
 		if err != nil {
 			return nil, err
 		}
