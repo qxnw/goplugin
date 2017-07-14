@@ -27,11 +27,13 @@ type RPCInvoker interface {
 type Worker interface {
 	GetServices() []string
 	Handle(name string, mode string, service string, c Context, invoker RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error)
+	Close() error
 }
 
 //Handler 处理程序接口
 type Handler interface {
 	Handle(service string, c Context, invoker RPCInvoker) (status int, result interface{}, params map[string]interface{}, err error)
+	Close() error
 }
 
 type Registry struct {
