@@ -39,7 +39,7 @@ func (cache *ContextCache) GetCache(names ...string) (c *memcache.MemcacheClient
 	}
 	_, memCached, err := memCache.SetIfAbsentCb(name, func(input ...interface{}) (c interface{}, err error) {
 		name := input[0].(string)
-		conf, err := cache.ctx.GetVarValue("cache", sName)
+		conf, err := cache.ctx.GetVarValue("cache", name)
 		if err != nil {
 			return nil, err
 		}
@@ -58,6 +58,10 @@ func (cache *ContextCache) GetCache(names ...string) (c *memcache.MemcacheClient
 		}
 		return
 	}, name)
+	if err != nil {
+		err = fmt.Errorf("初始化memcached失败:%v", err)
+		return
+	}
 	c = memCached.(*memcache.MemcacheClient)
 	return
 }
