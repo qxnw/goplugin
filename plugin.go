@@ -12,7 +12,6 @@ type Context interface {
 	GetArgs() map[string]string
 	GetBody() string
 	GetParams() transform.ITransformGetter
-	GetJson() string
 	GetExt() map[string]interface{}
 }
 
