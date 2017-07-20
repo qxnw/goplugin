@@ -32,7 +32,7 @@ func (cd *ContextDB) GetDB(names ...string) (d *db.DB, err error) {
 	}
 	_, dbc, err := dbCache.SetIfAbsentCb(name, func(input ...interface{}) (d interface{}, err error) {
 		name := input[0].(string)
-		conf, err := cd.ctx.GetVarValue("db", sName)
+		conf, err := cd.ctx.GetVarValue("db", name)
 		if err != nil {
 			return nil, err
 		}
