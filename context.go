@@ -136,3 +136,50 @@ func (w *PluginContext) getVarParam() (func(c string, n string) (string, error),
 func (w *PluginContext) Close() {
 	contextPool.Put(w)
 }
+
+//GetString 从input获取字符串数据
+func (w *PluginContext) GetString(name string) string {
+	t, _ := w.Input.Get(name)
+	return t
+}
+
+//GetSessionID session id
+func (w *PluginContext) GetSessionID() string {
+	return w.Logger.GetSessionID()
+}
+
+//GetVarParam 获取var参数值，需提供在ext中提供__func_var_get_
+func (w *PluginContext) GetVarParam(tpName string, name string) (string, error) {
+	func_var := w.ctx.GetExt()["__func_var_get_"]
+	if func_var == nil {
+		return "", errors.New("未找到__func_var_get_")
+	}
+	if f, ok := func_var.(func(c string, n string) (string, error)); ok {
+		s, err := f(tpName, name)
+		if err != nil {
+			err = fmt.Errorf("无法通过获取到参数/@domain/var/%s/%s的值", tpName, name)
+			return "", err
+		}
+		return s, nil
+	}
+	return "", errors.New("未找到__func_var_get_传入类型错误")
+}
+
+//GetArgByName 获取arg的参数
+func (w *PluginContext) GetArgByName(name string) (string, error) {
+	argsMap := w.ctx.GetArgs()
+	db, ok := argsMap[name]
+	if db == "" || !ok {
+		return "", fmt.Errorf("args配置错误，缺少:%s参数:%v", name, w.ctx.GetArgs())
+	}
+	return db, nil
+}
+
+//GetVarParamByArgsName 根据args参数名获取var参数的值
+func (w *PluginContext) GetVarParamByArgsName(tpName string, argsName string) (string, error) {
+	name, err := w.GetArgByName(argsName)
+	if err != nil {
+		return "", err
+	}
+	return w.GetVarParam(tpName, name)
+}
