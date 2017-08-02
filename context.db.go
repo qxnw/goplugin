@@ -3,6 +3,8 @@ package goplugin
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/qxnw/lib4go/concurrent/cmap"
 	"github.com/qxnw/lib4go/db"
 	"github.com/qxnw/lib4go/jsons"
@@ -96,30 +98,36 @@ func (cd *ContextDB) Execute(tpl []string, input map[string]interface{}) (row in
 		err = fmt.Errorf("执行SQL语句失败:%s,:%v,err:%v", sql, input, err)
 		return
 	}
-	if key != "" {
+	if len(key) > 0 {
 		c, err := cd.ctx.GetCache()
 		if err != nil {
 			cd.ctx.Error("清除缓存,获取缓存操作实例失败:", err)
 			return row, nil
 		}
 		tf := transform.NewMaps(input)
-		err = c.Delete(tf.Translate(key))
-		if err != nil {
-			cd.ctx.Errorf("清除缓存失败：%s,%v", key, err)
+		for _, v := range key {
+			if v == "" {
+				continue
+			}
+			err = c.Delete(tf.Translate(v))
+			if err != nil {
+				cd.ctx.Errorf("清除缓存失败：%s,%v", v, err)
+			}
 		}
+
 	}
 	return
 }
 
 //getSQL 获取SQL语句
-func (cd *ContextDB) getSQL(tpl []string) (sql string, key string, err error) {
+func (cd *ContextDB) getSQL(tpl []string) (sql string, key []string, err error) {
 	if len(tpl) < 1 {
 		err = fmt.Errorf("输入的SQL模板错误，必须包含1个元素(SQL语句):%v", tpl)
 		return
 	}
 	sql = tpl[0]
 	if len(tpl) > 1 {
-		key = tpl[1]
+		key = strings.Split(tpl[1], ";")
 	}
 	return
 }
