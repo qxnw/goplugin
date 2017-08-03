@@ -3,8 +3,6 @@ package goplugin
 import (
 	"fmt"
 
-	"log"
-
 	"github.com/qxnw/lib4go/utility"
 )
 
@@ -27,12 +25,10 @@ func (t *tLogger) Println(args ...interface{}) {
 }
 
 func (t *tLogger) Infof(format string, content ...interface{}) {
-	//fmt.Printf(format, content...)
-	log.Printf(format, content)
+	fmt.Printf(format, content)
 }
 func (t *tLogger) Info(content ...interface{}) {
-	//fmt.Println(content...)
-	log.Print(content...)
+	fmt.Print(content...)
 }
 
 func (t *tLogger) Errorf(format string, content ...interface{}) {

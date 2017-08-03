@@ -15,6 +15,9 @@ type ContextRPC struct {
 func (cr *ContextRPC) Reset(ctx *PluginContext) {
 	cr.ctx = ctx
 }
+func (cr *ContextRPC) Preinit(services ...string) error {
+	return cr.ctx.rpc.PreInit()
+}
 
 //RequestFailRetry RPC请求
 func (cr *ContextRPC) RequestFailRetry(service string, input map[string]string, times int) (status int, r string, param map[string]string, err error) {
