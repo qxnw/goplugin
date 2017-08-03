@@ -16,8 +16,8 @@ func (cr *ContextRPC) Reset(ctx *PluginContext) {
 	cr.ctx = ctx
 }
 
-//Preinit 预加载服务
-func (cr *ContextRPC) Preinit(services ...string) error {
+//PreInit 预加载服务
+func (cr *ContextRPC) PreInit(services ...string) error {
 	return cr.ctx.rpc.PreInit()
 }
 
