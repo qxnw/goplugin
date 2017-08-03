@@ -69,7 +69,7 @@ func (cmq *ContextMQ) GetProducer() (p mq.MQProducer, err error) {
 		if !ok {
 			return nil, fmt.Errorf("mq配置文件错误，未包含address节点:var/mq/%s", name)
 		}
-		p, err := mq.NewMQProducer(address.(string), mq.WithLogger(cmq.ctx.Logger))
+		p, err := mq.NewMQProducer(address.(string), mq.WithLogger(cmq.ctx.ILogger))
 		if err != nil {
 			err = fmt.Errorf("创建mq失败,%s:err:%v", address, err)
 			return

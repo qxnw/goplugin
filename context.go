@@ -39,7 +39,7 @@ type PluginContext struct {
 	Cache       *ContextCache
 	MQ          *ContextMQ
 	RPC         *ContextRPC
-	*logger.Logger
+	logger.ILogger
 }
 
 //CheckInput 检查输入参数
@@ -88,6 +88,7 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 			wx.Close()
 		}
 	}()
+	wx.rpc = rpc
 	wx.Input = ctx.GetInput()
 	wx.Params = ctx.GetParams()
 	wx.Args = ctx.GetArgs()
@@ -96,11 +97,15 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 	if err != nil {
 		return
 	}
-	wx.Logger, err = wx.getLogger()
+
+	if _, ok := wx.ctx.GetExt()["__test__"]; ok {
+		wx.ILogger = &tLogger{}
+		return
+	}
+	wx.ILogger, err = wx.getLogger()
 	if err != nil {
 		return
 	}
-	wx.rpc = rpc
 	return
 }
 
@@ -145,7 +150,7 @@ func (w *PluginContext) GetString(name string) string {
 
 //GetSessionID session id
 func (w *PluginContext) GetSessionID() string {
-	return w.Logger.GetSessionID()
+	return w.ILogger.GetSessionID()
 }
 
 //GetVarParam 获取var参数值，需提供在ext中提供__func_var_get_

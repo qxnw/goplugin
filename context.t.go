@@ -45,6 +45,7 @@ func NewTContext() *TContext {
 			}
 			return t.FuncVarGet(c, n)
 		},
+		"__test__":  true,
 		"hydra_sid": utility.GetGUID()[0:8],
 	}
 	return t
