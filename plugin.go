@@ -10,7 +10,7 @@ import (
 type Context interface {
 	GetInput() transform.ITransformGetter
 	GetArgs() map[string]string
-	GetBody() string
+	GetBody(encoding ...string) (string, error)
 	GetParams() transform.ITransformGetter
 	GetExt() map[string]interface{}
 }

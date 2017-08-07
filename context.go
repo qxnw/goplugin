@@ -9,6 +9,7 @@ import (
 	"github.com/qxnw/lib4go/logger"
 	"github.com/qxnw/lib4go/memcache"
 	"github.com/qxnw/lib4go/transform"
+	"github.com/qxnw/lib4go/utility"
 )
 
 var contextPool *sync.Pool
@@ -92,7 +93,7 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 	wx.Input = ctx.GetInput()
 	wx.Params = ctx.GetParams()
 	wx.Args = ctx.GetArgs()
-	wx.Body = ctx.GetBody()
+	wx.Body, _ = ctx.GetBody()
 	wx.GetVarValue, err = wx.getVarParam()
 	if err != nil {
 		return
@@ -114,6 +115,22 @@ func (w *PluginContext) getLogger() (*logger.Logger, error) {
 		return logger.GetSession("wx_base_core", session.(string)), nil
 	}
 	return nil, fmt.Errorf("输入的context里没有包含hydra_sid(%v)", w.ctx.GetExt())
+}
+
+//ResetByBody 根据编码重置input参数
+func (w *PluginContext) ResetByBody(encoding ...string) error {
+	body, err := w.ctx.GetBody(encoding...)
+	if err != nil {
+		return err
+	}
+	qString, err := utility.GetMapWithQuery(body)
+	if err != nil {
+		return err
+	}
+	for k, v := range qString {
+		w.Input.Set(k, v)
+	}
+	return nil
 }
 
 //GetCache 获取缓存操作对象
