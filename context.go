@@ -160,8 +160,11 @@ func (w *PluginContext) Close() {
 }
 
 //GetString 从input获取字符串数据
-func (w *PluginContext) GetString(name string) string {
-	t, _ := w.Input.Get(name)
+func (w *PluginContext) GetString(name string, p ...string) string {
+	t, err := w.Input.Get(name)
+	if err != nil && len(p) > 0 {
+		return p[0]
+	}
 	return t
 }
 
