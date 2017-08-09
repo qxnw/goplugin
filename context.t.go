@@ -25,8 +25,8 @@ func (g *TContext) GetParams() transform.ITransformGetter {
 func (g *TContext) GetArgs() map[string]string {
 	return g.Args
 }
-func (g *TContext) GetBody() string {
-	return g.Body
+func (g *TContext) GetBody(encoding ...string) (string, error) {
+	return g.Body, nil
 
 }
 func (g *TContext) GetExt() map[string]interface{} {
