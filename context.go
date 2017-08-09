@@ -200,6 +200,18 @@ func (w *PluginContext) GetArgByName(name string) (string, error) {
 	return db, nil
 }
 
+//GetArgsValue 获取args参数
+func (w *PluginContext) GetArgsValue(name string, def ...string) string {
+	r, err := w.GetArgByName(name)
+	if err == nil {
+		return r
+	}
+	if len(def) > 0 {
+		return def[0]
+	}
+	return ""
+}
+
 //GetVarParamByArgsName 根据args参数名获取var参数的值
 func (w *PluginContext) GetVarParamByArgsName(tpName string, argsName string) (string, error) {
 	name, err := w.GetArgByName(argsName)
