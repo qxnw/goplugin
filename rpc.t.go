@@ -58,3 +58,6 @@ func (r *TRPC) AsyncRequest(service string, input map[string]string, failFast bo
 func (r *TRPC) WaitWithFailFast(callback func(string, int, string, error), timeout time.Duration, rs ...rpc.IRPCResponse) error {
 	return r.Error
 }
+func (r *TRPC) PreInit(services ...string) error {
+	return r.Error
+}
