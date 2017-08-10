@@ -5,8 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"encoding/json"
+
 	"github.com/qxnw/lib4go/concurrent/cmap"
-	"github.com/qxnw/lib4go/jsons"
 	"github.com/qxnw/lib4go/mq"
 )
 
@@ -60,23 +61,24 @@ func (cmq *ContextMQ) GetProducer() (p mq.MQProducer, err error) {
 			err = fmt.Errorf("未找到mq配置参数:var/mq/%s,err:%v", name, err)
 			return nil, err
 		}
-		configMap, err := jsons.Unmarshal([]byte(conf))
+		mqConf := &mq.OptionConf{}
+		json.Unmarshal([]byte(conf), mqConf)
 		if err != nil {
 			err = fmt.Errorf("var/mq/%s配置参数的值不是有效的json err:%v", name, err)
 			return nil, err
 		}
-		address, ok := configMap["address"]
-		if !ok {
+		if mqConf.Address == "" {
 			return nil, fmt.Errorf("mq配置文件错误，未包含address节点:var/mq/%s", name)
 		}
-		p, err := mq.NewMQProducer(address.(string), mq.WithLogger(cmq.ctx.ILogger))
+		mqConf.Logger = cmq.ctx.ILogger
+		p, err := mq.NewMQProducer(mqConf.Address, mq.WithConf(mqConf))
 		if err != nil {
-			err = fmt.Errorf("创建mq失败,%s:err:%v", address, err)
+			err = fmt.Errorf("创建mq失败,%s:err:%v", mqConf.Address, err)
 			return
 		}
 		err = p.Connect()
 		if err != nil {
-			err = fmt.Errorf("无法连接到MQ服务器:%v,err:%v", address, err)
+			err = fmt.Errorf("无法连接到MQ服务器:%v,err:%v", mqConf.Address, err)
 			return
 		}
 		return p, err
