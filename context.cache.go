@@ -17,14 +17,25 @@ import (
 //ContextCache 缓存
 type ContextCache struct {
 	ctx *PluginContext
+	db  *db.DB
 }
 
 //ErrDataNotExist 数据不存在
 var ErrDataNotExist = errors.New("查询的数据不存在")
 
 //Reset 重置context
-func (cache *ContextCache) Reset(ctx *PluginContext) {
+func (cache *ContextCache) Reset(ctx *PluginContext) (err error) {
 	cache.ctx = ctx
+	cache.db, err = ctx.GetDB()
+	return
+}
+
+//NewContextCache 构建缓存操作对象
+func NewContextCache(wx *PluginContext, db *db.DB) *ContextCache {
+	ctx := &ContextCache{}
+	ctx.ctx = wx
+	ctx.db = db
+	return ctx
 }
 
 //GetCache 获取缓存操作对象
@@ -82,11 +93,7 @@ func (cache *ContextCache) GetJSON(tpl []string, input map[string]interface{}) (
 	if cvalue != "" {
 		return
 	}
-	db, err := cache.ctx.GetDB()
-	if err != nil {
-		return
-	}
-	data, _, _, err := db.Query(sql, input)
+	data, _, _, err := cache.db.Query(sql, input)
 	if err != nil {
 		return
 	}
@@ -151,12 +158,7 @@ func (cache *ContextCache) GetDataRows(tpl []string, input map[string]interface{
 		err = json.Unmarshal([]byte(dstr), &data)
 		return
 	}
-	db, err := cache.ctx.GetDB()
-	if err != nil {
-		err = fmt.Errorf("创建数据库连接对象异常:%v", err)
-		return
-	}
-	data, query, params, err = db.Query(sql, input)
+	data, query, params, err = cache.db.Query(sql, input)
 	if err != nil {
 		err = fmt.Errorf("从数据库中查询数据异常:%s,%v,err:%v", sql, input, err)
 		return
