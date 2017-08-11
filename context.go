@@ -81,18 +81,12 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
 
-	wx.DB.Reset(wx)
-	wx.MQ.Reset(wx)
-	wx.RPC.Reset(wx)
 	defer func() {
 		if err != nil {
 			wx.Close()
 		}
 	}()
-	err = wx.Cache.Reset(wx)
-	if err != nil {
-		return
-	}
+
 	wx.rpc = rpc
 	wx.Input = ctx.GetInput()
 	wx.Params = ctx.GetParams()
@@ -108,6 +102,13 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 		return
 	}
 	wx.ILogger, err = wx.getLogger()
+	if err != nil {
+		return
+	}
+	wx.DB.Reset(wx)
+	wx.MQ.Reset(wx)
+	wx.RPC.Reset(wx)
+	err = wx.Cache.Reset(wx)
 	if err != nil {
 		return
 	}
