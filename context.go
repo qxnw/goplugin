@@ -80,10 +80,7 @@ func (w *PluginContext) CheckMap(input map[string]interface{}, names ...string) 
 func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 	wx = contextPool.Get().(*PluginContext)
 	wx.ctx = ctx
-	err = wx.Cache.Reset(wx)
-	if err != nil {
-		return
-	}
+
 	wx.DB.Reset(wx)
 	wx.MQ.Reset(wx)
 	wx.RPC.Reset(wx)
@@ -92,6 +89,10 @@ func GetContext(ctx Context, rpc RPCInvoker) (wx *PluginContext, err error) {
 			wx.Close()
 		}
 	}()
+	err = wx.Cache.Reset(wx)
+	if err != nil {
+		return
+	}
 	wx.rpc = rpc
 	wx.Input = ctx.GetInput()
 	wx.Params = ctx.GetParams()
