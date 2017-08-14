@@ -26,7 +26,7 @@ var ErrDataNotExist = errors.New("查询的数据不存在")
 //Reset 重置context
 func (cache *ContextCache) Reset(ctx *PluginContext) (err error) {
 	cache.ctx = ctx
-	cache.db, err = ctx.GetDB()
+	//cache.db, err = ctx.GetDB()
 	return
 }
 
